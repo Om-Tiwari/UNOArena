@@ -1,0 +1,19 @@
+[project]
+name = "uno-backend"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.116.1",
+    "langchain>=0.3.27",
+    "langchain-cerebras>=0.5.0",
+    "langchain-google-genai>=2.1.9",
+    "langchain-groq>=0.3.7",
+    "langchain-huggingface>=0.3.1",
+    "langchain-sambanova>=0.1.6",
+    "openai>=1.99.9",
+    "python-dotenv>=1.1.1",
+    "ruff>=0.12.9",
+    "uvicorn>=0.35.0",
+]

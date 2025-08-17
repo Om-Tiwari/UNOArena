@@ -1,0 +1,37 @@
+build
+
+# dependencies
+*/node_modules
+*/.pnp
+.pnp.js
+
+# testing
+*/coverage
+ 
+
+# misc
+.DS_Store
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.vscode
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+.python-version
+*.lock
+.env
+.ruff_cache/
