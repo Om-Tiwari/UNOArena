@@ -79,9 +79,9 @@ export class LLMEnhancedBotsServer extends EventsObject {
         // Default configuration
         this.llmBackendUrl = "http://localhost:8000";
         this.llmTimeout = 15000; 
-        this.llmUsage = true; // Enabled by default
-        this.apiProvider = "gemini"; // Default provider
-        this.model = ""; // Default model
+        this.llmUsage = true; 
+        this.apiProvider = "";
+        this.model = "";
     }
 
     /**

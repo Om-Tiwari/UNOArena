@@ -11,18 +11,28 @@ const Root = styled.div`
 `;
 
 export default function PlayerStack() {
-  const { player, currentPlayer } = useSelector((state) => ({
+  const { player, currentPlayer, players, playerId } = useSelector((state) => ({
     player: state.game.players[0],
     currentPlayer: state.game.currentPlayer,
+    players: state.game.players,
+    playerId: state.game.playerId,
   }));
   const cards = player?.cards || [];
+
+  // Determine spectating: playerId exists but is not one of the seated players
+  const spectating = Array.isArray(players) && playerId && !players.some((p) => p && p.id === playerId);
+
+  // When spectating, force all hand cards to non-playable (no clicks)
+  const displayCards = spectating
+    ? cards.map((c) => ({ ...c, playable: false }))
+    : cards;
 
   return (
     <Root>
       <CardsRow
-        cards={cards}
-        highlight={currentPlayer === 0}
-        cardProps={{ selectable: true }}
+        cards={displayCards}
+        highlight={currentPlayer === 0 && !spectating}
+        cardProps={{ selectable: !spectating }}
       />
     </Root>
   );

@@ -3,6 +3,7 @@ import { shuffle, wrapMod } from "../utils/helpers";
 import { Card, Player } from "../utils/interfaces";
 import data from "./data.json";
 import { LLMEnhancedBotsServer } from './LLMBot';
+import { getEnabledProviders } from "../utils/llmConfig";
 
 export interface IMoveEvent {
   curPlayer: number;
@@ -38,7 +39,7 @@ export default class BotsServer extends EventsObject {
     this.numberOfPlayers = numberOfPlayers;
     this.llmBot = new LLMEnhancedBotsServer();
     this.llmBot.setLLMUsage(true);
-    this.llmBot.setLLMProvider('gemini');
+    this.llmBot.setLLMProvider('cerebras');
   }
 
   init() {
@@ -67,14 +68,28 @@ export default class BotsServer extends EventsObject {
 
   addBots() {
     const numToAdd = this.numberOfPlayers - this.players.length;
+    // Load experiment config
+    let llmConfigs = getEnabledProviders();
+    if (!llmConfigs || llmConfigs.length === 0) {
+      // Fallback to defaults if nothing enabled
+      llmConfigs = [
+        { provider: 'cerebras', model: 'qwen-3-235b-a22b-thinking-2507' },
+        { provider: 'groq', model: 'openai/gpt-oss-120b' },
+        { provider: 'gemini', model: 'gemini-2.5-pro' },
+        { provider: 'sambanova', model: 'DeepSeek-R1-0528' },
+      ];
+    }
     for (let i = 0; i < numToAdd; i++) {
       const bot = data.players[i];
       const playerId = this.players.length.toString();
+      const cfg = llmConfigs[i % llmConfigs.length];
       this.players.push({
         ...bot,
         id: playerId,
         cards: [],
         isBot: true,
+        llmProvider: cfg.provider,
+        llmModel: cfg.model,
       });
     }
     this.fireEvent("players-changed", this.players);
@@ -92,15 +107,22 @@ export default class BotsServer extends EventsObject {
     this.players.forEach((player, idx) => {
       player.cards = cards.slice(idx * NUM_CARDS, (idx + 1) * NUM_CARDS);
     });
-    this.drawingStk = cards.slice(
-      this.players.length * NUM_CARDS,
-      cards.length
-    );
+    this.drawingStk = cards.slice(this.players.length * NUM_CARDS, cards.length);
 
+    // Flip the first table card (prefer a non-black card)
+    let idx = 0;
+    while (idx < this.drawingStk.length && this.drawingStk[idx].color === "black") idx++;
+    const firstTableCard = this.drawingStk.splice(idx, 1)[0] || this.drawingStk.shift();
+    if (firstTableCard) this.tableStk.unshift(firstTableCard as Card);
+
+    // In Arena mode (all bots), pick the first player's cards so UI has a hand to render
+    const humanOrFirst = this.players.find((p) => !p.isBot) || this.players[0];
     this.fireEvent("game-init", {
-      cards: this.players.find((p) => !p.isBot)?.cards,
+      cards: humanOrFirst?.cards || [],
       players: this.players.map((p) => ({ ...p, cards: [] })),
     });
+    // Auto-start turns; if current player is a bot, it will move
+    this.ready();
   }
 
   ready() {
@@ -216,6 +238,15 @@ export default class BotsServer extends EventsObject {
     };
 
     try {
+        // Apply per-bot LLM settings before requesting a move
+        if (currentPlayer.llmProvider || currentPlayer.llmModel || currentPlayer.llmBaseUrl || currentPlayer.llmApiKey) {
+            this.llmBot.setLLMProvider(
+              currentPlayer.llmProvider || 'cerebras',
+              currentPlayer.llmModel,
+              currentPlayer.llmBaseUrl,
+              currentPlayer.llmApiKey,
+            );
+        }
         const llmMove = await this.llmBot.getLLMMove(gameState, currentPlayer.cards);
         if (llmMove.action === 'play' && llmMove.card_id) {
             this.move(false, llmMove.card_id);

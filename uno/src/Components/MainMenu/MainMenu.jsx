@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Grid from "@mui/material/Grid";
 import Paper from "../Shared/Paper/Paper";
 import Button from "../Shared/Button/Button";
@@ -7,6 +7,12 @@ import { Link, useNavigate } from "react-router-dom";
 import API from "../../api/API";
 import { useDispatch } from "../../utils/hooks";
 import { setInLobby, setPlayerId } from "../../stores/features/gameSlice";
+import {
+  loadLLMConfig,
+  saveLLMConfig,
+  AVAILABLE_PROVIDERS,
+  getDefaultConfig,
+} from "../../utils/llmConfig";
 const style = {
   color: "#fff",
 };
@@ -14,6 +20,12 @@ const style = {
 const MainMenu = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const [cfg, setCfg] = useState(getDefaultConfig());
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setCfg(loadLLMConfig());
+  }, []);
 
   const onPlayOnline = () => {
     API.playOnline(true);
@@ -25,6 +37,54 @@ const MainMenu = () => {
     dispatch(setPlayerId(playerId));
     dispatch(setInLobby(true));
     navigate("/waiting-lobby");
+  };
+
+  const onPlayArena = async () => {
+    // Start Arena: all four players are LLMs
+    const spectatorId = await API.startArena();
+    dispatch(setPlayerId(spectatorId));
+    dispatch(setInLobby(true));
+    navigate("/waiting-lobby");
+  };
+
+  const toggleProvider = (provider) => {
+    setCfg((prev) => ({
+      ...prev,
+      providers: prev.providers.map((p) =>
+        p.provider === provider ? { ...p, enabled: !p.enabled } : p
+      ),
+    }));
+  };
+
+  const changeModel = (provider, model) => {
+    setCfg((prev) => ({
+      ...prev,
+      providers: prev.providers.map((p) =>
+        p.provider === provider ? { ...p, model } : p
+      ),
+    }));
+  };
+
+  const onSaveLLMConfig = () => {
+    setSaving(true);
+    try {
+      // Ensure all providers exist in config
+      const normalized = {
+        providers: Object.keys(AVAILABLE_PROVIDERS).map((prov) => {
+          const found = cfg.providers.find((p) => p.provider === prov);
+          return (
+            found || {
+              provider: prov,
+              enabled: true,
+              model: AVAILABLE_PROVIDERS[prov].models[0],
+            }
+          );
+        }),
+      };
+      saveLLMConfig(normalized);
+    } finally {
+      setTimeout(() => setSaving(false), 300);
+    }
   };
 
   return (
@@ -41,37 +101,57 @@ const MainMenu = () => {
           spacing={2}
           sx={12}
         >
-          <Grid item xs={12} md={5}>
-            <Button
-              disabled={!API.isOnline}
-              style={{ width: "80%" }}
-              href="/create-server"
-              onClick={onPlayOnline}
-            >
-              <img src="assets/icons/add.svg" alt="" />
-              <Typography>Create A Game</Typography>
-            </Button>
-          </Grid>
-          <Grid item sx={{ display: { xs: "none", md: "initial" } }} md={2}>
-            <Typography>OR</Typography>
-          </Grid>
-          <Grid item xs={12} md={5}>
-            <Button
-              disabled={!API.isOnline}
-              style={{ width: "80%" }}
-              href="/join-server"
-              onClick={onPlayOnline}
-            >
-              <img src="assets/icons/glob.svg" alt="" />
-              <Typography>Join A Game</Typography>
-            </Button>
-          </Grid>
           <Grid item xs={12} md={5} mt={3}>
             <Button style={{ width: "80%" }} onClick={onPlayOffline}>
               <img src="assets/icons/tv.svg" alt="" />
-              <Typography>Play with PC</Typography>
+              <Typography>Play with LLM</Typography>
             </Button>
           </Grid>
+          <Grid item xs={12} md={5} mt={3}>
+            <Button style={{ width: "80%" }} onClick={onPlayArena}>
+              <img src="assets/icons/tv.svg" alt="" />
+              <Typography>Arena (All LLMs)</Typography>
+            </Button>
+          </Grid>
+        </Grid>
+        <Grid item xs={10} mt={6}>
+          <Typography fontSize={20}>LLM Experiment Configuration</Typography>
+        </Grid>
+        <Grid item xs={10}>
+          {Object.keys(AVAILABLE_PROVIDERS).map((prov) => {
+            const meta = AVAILABLE_PROVIDERS[prov];
+            const row = cfg.providers.find((p) => p.provider === prov) || {
+              provider: prov,
+              enabled: true,
+              model: meta.models[0],
+            };
+            return (
+              <div key={prov} style={{ display: "flex", alignItems: "center", margin: "8px 0" }}>
+                <input
+                  type="checkbox"
+                  checked={!!row.enabled}
+                  onChange={() => toggleProvider(prov)}
+                  style={{ marginRight: 8 }}
+                  id={`prov-${prov}`}
+                />
+                <label htmlFor={`prov-${prov}`} style={{ width: 140 }}>{meta.label}</label>
+                <select
+                  value={row.model}
+                  onChange={(e) => changeModel(prov, e.target.value)}
+                  style={{ marginLeft: 16 }}
+                >
+                  {meta.models.map((m) => (
+                    <option value={m} key={m}>{m}</option>
+                  ))}
+                </select>
+              </div>
+            );
+          })}
+          <div style={{ marginTop: 12 }}>
+            <Button onClick={onSaveLLMConfig} disabled={saving}>
+              <Typography>{saving ? "Saving..." : "Save LLM Config"}</Typography>
+            </Button>
+          </div>
         </Grid>
         <Grid item container alignItems="center" justifyContent="center" mt={6}>
           <Grid item xs={6}>

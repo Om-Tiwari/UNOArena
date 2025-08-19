@@ -23,6 +23,11 @@ export default function Game() {
   const [finished, setFinished] = useState(false)
   const [playersOrder, setPlayersOrder] = useState<Player[]>([]);
   const inGame = useSelector(state => state.game.inGame)
+  const { players, playerId } = useSelector((state) => ({
+    players: state.game.players,
+    playerId: state.game.playerId,
+  }));
+  const spectating = Array.isArray(players) && playerId && !players.some((p: any) => p && p.id === playerId);
 
 
   useEffect(() => {
@@ -70,6 +75,27 @@ export default function Game() {
         <PlayerStack />
         <DrawingStack />
       </AnimateSharedLayout>
+
+      {spectating && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 12,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: 'rgba(0,0,0,0.6)',
+            color: 'white',
+            padding: '6px 12px',
+            borderRadius: 8,
+            fontSize: 14,
+            zIndex: 1000,
+            pointerEvents: 'none',
+          }}
+          title="You are spectating an all-LLM Arena match"
+        >
+          Arena (Spectating)
+        </div>
+      )}
 
       {finished && <Scoreboard players={playersOrder} />}
     </div>

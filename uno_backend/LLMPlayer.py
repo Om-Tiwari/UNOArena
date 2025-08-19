@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, List, Optional, Tuple, Literal
+from typing import Dict, List, Optional, Tuple, Literal, Union
 from pydantic import BaseModel, Field
 from langchain_groq import ChatGroq
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -26,7 +26,7 @@ class UNOMove(BaseModel):
     action: Literal["play", "draw"] = Field(
         description="The action to take: play a card or draw from deck"
     )
-    card_id: Optional[str] = Field(
+    card_id: Optional[Union[str, int]] = Field(
         None, description="ID of the card to play (required if action is 'play')"
     )
     color: Optional[Literal["red", "blue", "green", "yellow"]] = Field(
@@ -514,10 +514,11 @@ Make your decision and explain your reasoning.
             if not move.card_id:
                 return False, "Card ID is required for play action"
 
-            # Find the card in player's hand
-            card = next((c for c in player_cards if c.get("id") == move.card_id), None)
+            # Find the card in player's hand (coerce to string for comparison)
+            move_card_id = str(move.card_id) if move.card_id is not None else None
+            card = next((c for c in player_cards if c.get("id") == move_card_id), None)
             if not card:
-                return False, f"Card with ID {move.card_id} not found in player's hand"
+                return False, f"Card with ID {move_card_id} not found in player's hand"
 
             # Get top card and game rules
             table_stack = game_state.get("tableStack", [])
@@ -660,7 +661,11 @@ Make your decision and explain your reasoning.
                 if is_valid:
                     logger.info(f"LLM predicted valid move: {predicted_move}")
                     # Convert Pydantic model to dict for backward compatibility
-                    return predicted_move.model_dump()
+                    move_dict = predicted_move.model_dump()
+                    # Normalize card_id to string to align with game state card ids
+                    if move_dict.get("action") == "play" and move_dict.get("card_id") is not None:
+                        move_dict["card_id"] = str(move_dict["card_id"])
+                    return move_dict
                 else:
                     logger.warning(f"Attempt {attempt + 1}: Invalid move - {reason}")
 
@@ -790,6 +795,8 @@ Keep your response concise and actionable.
             # Update game state based on move result
             if move_result.get("action") == "play":
                 card_id = move_result.get("card_id")
+                # normalize to string
+                card_id = str(card_id) if card_id is not None else None
                 if card_id:
                     # Remove played card from player's hand
                     player_cards = game_state.get("currentPlayer", {}).get("cards", [])

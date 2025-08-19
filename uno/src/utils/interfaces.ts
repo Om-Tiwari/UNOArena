@@ -4,6 +4,11 @@ export interface Player {
   img: string;
   cards: Card[];
   isBot?: boolean;
+  // Optional per-bot LLM configuration
+  llmProvider?: string;
+  llmModel?: string;
+  llmBaseUrl?: string;
+  llmApiKey?: string;
 }
 
 export interface Card {

@@ -41,16 +41,20 @@ const Root = styled.div`
 `;
 
 export default function DrawingStack() {
-  const { drawingStack, currentPlayer } = useSelector((state) => ({
+  const { drawingStack, currentPlayer, players, playerId } = useSelector((state) => ({
     drawingStack: state.game.drawingStack,
     currentPlayer: state.game.currentPlayer,
+    players: state.game.players,
+    playerId: state.game.playerId,
   }));
   const dispatch = useDispatch();
 
   const [gameStarted, setGameStarted] = useState(false);
 
   const handleClick = () => {
-    if (currentPlayer === 0) API.move(true);
+    // Allow draw only if it's actually the human player's seat and turn
+    const isMySeat = players && players[0] && players[0].id === playerId;
+    if (isMySeat && currentPlayer === 0) API.move(true);
   };
 
   useEffect(() => {
@@ -61,7 +65,8 @@ export default function DrawingStack() {
     }, 2000);
   }, [dispatch]);
 
-  const canHover = gameStarted && currentPlayer === 0;
+  const isMySeat = players && players[0] && players[0].id === playerId;
+  const canHover = gameStarted && isMySeat && currentPlayer === 0;
   const highlight = canHover || !gameStarted;
 
   return (

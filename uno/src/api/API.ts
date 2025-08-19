@@ -14,6 +14,15 @@ export class _API implements ServerInterface {
     this._server = new OfflineServer();
   }
 
+  /**
+   * Start Arena mode: all 4 players are LLMs (no human-controlled player).
+   * Returns a synthetic playerId representing the spectator/bot slot so the UI can proceed.
+   */
+  startArena(): Promise<string> {
+    // OfflineServer knows how to initialize Arena mode
+    return (this._server as OfflineServer).startArena();
+  }
+
   getServers(): Promise<GameServer[]> {
     console.log(this._server);
 
