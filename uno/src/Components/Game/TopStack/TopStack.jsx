@@ -18,6 +18,24 @@ export default function TopStack() {
   return (
     <Root>
       <CardsRow cards={cards} highlight={currentPlayer === 2} />
+      {player?.isBot && player?.llmProvider ? (
+        <div
+          style={{
+            textAlign: 'center',
+            position: 'fixed',
+            left: 180,
+            marginTop: 6,
+            fontSize: 12,
+            color: '#bbb',
+            background: 'rgba(0,0,0,0.4)',
+            padding: '2px 6px',
+            borderRadius: 6,
+            display: 'inline-block',
+          }}
+        >
+          {player.name} ({player.llmProvider}{player.llmModel ? `:${player.llmModel}` : ''})
+        </div>
+      ) : null}
     </Root>
   );
 }

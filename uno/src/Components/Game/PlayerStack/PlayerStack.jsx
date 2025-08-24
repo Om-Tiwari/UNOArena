@@ -34,6 +34,24 @@ export default function PlayerStack() {
         highlight={currentPlayer === 0 && !spectating}
         cardProps={{ selectable: !spectating }}
       />
+      {player?.isBot && player?.llmProvider ? (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: 200,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            fontSize: 12,
+            color: '#bbb',
+            background: 'rgba(0,0,0,0.4)',
+            padding: '2px 6px',
+            borderRadius: 6,
+            pointerEvents: 'none',
+          }}
+        >
+          {player.name} ({player.llmProvider}{player.llmModel ? `:${player.llmModel}` : ''})
+        </div>
+      ) : null}
     </Root>
   );
 }

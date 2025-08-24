@@ -10,8 +10,9 @@ import { setInLobby, setPlayerId } from "../../stores/features/gameSlice";
 import {
   loadLLMConfig,
   saveLLMConfig,
-  AVAILABLE_PROVIDERS,
   getDefaultConfig,
+  getAvailableProviders,
+  loadProvidersFromBackend,
 } from "../../utils/llmConfig";
 const style = {
   color: "#fff",
@@ -20,12 +21,17 @@ const style = {
 const MainMenu = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const [cfg, setCfg] = useState(getDefaultConfig());
+  const [mode, setMode] = useState('play');
+  const [cfg, setCfg] = useState(getDefaultConfig().play);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    setCfg(loadLLMConfig());
-  }, []);
+    // Sync providers from backend then load config for current mode
+    (async () => {
+      await loadProvidersFromBackend();
+      setCfg(loadLLMConfig(mode));
+    })();
+  }, [mode]);
 
   const onPlayOnline = () => {
     API.playOnline(true);
@@ -70,18 +76,18 @@ const MainMenu = () => {
     try {
       // Ensure all providers exist in config
       const normalized = {
-        providers: Object.keys(AVAILABLE_PROVIDERS).map((prov) => {
+        providers: Object.keys(getAvailableProviders()).map((prov) => {
           const found = cfg.providers.find((p) => p.provider === prov);
           return (
             found || {
               provider: prov,
               enabled: true,
-              model: AVAILABLE_PROVIDERS[prov].models[0],
+              model: getAvailableProviders()[prov].models[0],
             }
           );
         }),
       };
-      saveLLMConfig(normalized);
+      saveLLMConfig(mode, normalized);
     } finally {
       setTimeout(() => setSaving(false), 300);
     }
@@ -115,11 +121,19 @@ const MainMenu = () => {
           </Grid>
         </Grid>
         <Grid item xs={10} mt={6}>
-          <Typography fontSize={20}>LLM Experiment Configuration</Typography>
+          <Typography fontSize={20}>LLM Configuration</Typography>
         </Grid>
         <Grid item xs={10}>
-          {Object.keys(AVAILABLE_PROVIDERS).map((prov) => {
-            const meta = AVAILABLE_PROVIDERS[prov];
+          <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
+            <Button onClick={() => setMode('play')} style={{ opacity: mode==='play'?1:0.7 }}>
+              <Typography>Play Mode</Typography>
+            </Button>
+            <Button onClick={() => setMode('arena')} style={{ opacity: mode==='arena'?1:0.7 }}>
+              <Typography>Arena Mode</Typography>
+            </Button>
+          </div>
+          {Object.keys(getAvailableProviders()).map((prov) => {
+            const meta = getAvailableProviders()[prov];
             const row = cfg.providers.find((p) => p.provider === prov) || {
               provider: prov,
               enabled: true,

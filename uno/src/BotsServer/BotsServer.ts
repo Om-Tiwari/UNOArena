@@ -66,10 +66,10 @@ export default class BotsServer extends EventsObject {
     return playerId;
   }
 
-  addBots() {
+  addBots(mode: 'play' | 'arena' = 'play') {
     const numToAdd = this.numberOfPlayers - this.players.length;
     // Load experiment config
-    let llmConfigs = getEnabledProviders();
+    let llmConfigs = getEnabledProviders(mode);
     if (!llmConfigs || llmConfigs.length === 0) {
       // Fallback to defaults if nothing enabled
       llmConfigs = [

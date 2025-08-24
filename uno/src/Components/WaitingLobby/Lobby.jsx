@@ -85,7 +85,14 @@ const Lobby = () => {
                 spacing={1}
               >
                 <Avatar seed={`${player.name}${player.img}`} />
-                <Typography>{player.name}</Typography>
+                <Typography>
+                  {player.name}
+                  {player.isBot && player.llmProvider ? (
+                    <span style={{ fontSize: 12, color: '#bbb' }}>
+                      {`  (${player.llmProvider}${player.llmModel ? ':' + player.llmModel : ''})`}
+                    </span>
+                  ) : null}
+                </Typography>
               </Stack>
             );
           })}

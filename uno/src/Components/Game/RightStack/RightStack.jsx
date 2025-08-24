@@ -18,6 +18,25 @@ export default function RightStack() {
   return (
     <Root>
       <CardsColumn cards={cards} highlight={currentPlayer === 3} />
+      {player?.isBot && player?.llmProvider ? (
+        <div
+          style={{
+            position: 'fixed',
+            right: 160,
+            top: '50%',
+            transform: 'translateY(-50%)',
+            fontSize: 12,
+            color: '#bbb',
+            background: 'rgba(0,0,0,0.4)',
+            padding: '2px 6px',
+            borderRadius: 6,
+            pointerEvents: 'none',
+            zIndex: 1000,
+          }}
+        >
+          {player.name} ({player.llmProvider}{player.llmModel ? `:${player.llmModel}` : ''})
+        </div>
+      ) : null}
     </Root>
   );
 }

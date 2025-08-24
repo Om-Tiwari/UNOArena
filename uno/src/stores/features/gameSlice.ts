@@ -158,23 +158,33 @@ export const gameSlice = createSlice({
       if (card) {
         let layoutId: string | undefined = "";
         let shouldFlip = false;
-        if (curPlayerObj.id !== state.playerId) {
-          layoutId =
-            curPlayerObj.cards[
-              Math.floor(Math.random() * curPlayerObj.cards.length)
-            ].layoutId;
+        const curCards = (curPlayerObj && Array.isArray(curPlayerObj.cards))
+          ? curPlayerObj.cards
+          : [];
+        if (curPlayerObj && curPlayerObj.id !== state.playerId) {
+          // Opponent played: pick a random card layoutId to animate, if available
+          if (curCards.length > 0) {
+            const idx = Math.floor(Math.random() * curCards.length);
+            layoutId = curCards[idx]?.layoutId;
+          }
+          // If no card available (e.g., player finished), generate a placeholder layoutId
+          if (!layoutId) layoutId = `id_${cardLayoutIdIdx++}`;
           shouldFlip = true;
         } else {
-          layoutId = curPlayerObj.cards.find((c) => c.id === card?.id)
-            ?.layoutId;
-          const cardToMove = curPlayerObj.cards.filter(
-            (c) => c.layoutId === layoutId
-          )[0];
+          // My move: find the actual card by id in my hand
+          layoutId = curCards.find((c) => c.id === card?.id)?.layoutId;
+          const cardToMove = curCards.find((c) => c.layoutId === layoutId);
           console.log(layoutId, current(cardToMove));
 
-          card.color = cardToMove.color;
-          card.action = cardToMove.action;
-          card.digit = cardToMove.digit;
+          // If found locally, overwrite with authoritative local properties
+          if (cardToMove) {
+            card.color = cardToMove.color;
+            card.action = cardToMove.action;
+            card.digit = cardToMove.digit;
+          } else {
+            // Fallback: ensure layoutId exists to proceed with animation
+            if (!layoutId) layoutId = `id_${cardLayoutIdIdx++}`;
+          }
         }
 
         state.tableStack = [
@@ -192,7 +202,9 @@ export const gameSlice = createSlice({
           if (p === curPlayerObj) {
             return {
               ...p,
-              cards: p.cards.filter((c) => c.layoutId !== layoutId),
+              cards: Array.isArray(p.cards)
+                ? p.cards.filter((c) => c.layoutId !== layoutId)
+                : p.cards,
             };
           }
           return p;

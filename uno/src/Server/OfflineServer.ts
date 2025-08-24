@@ -43,7 +43,7 @@ export class OfflineServer implements ServerInterface {
     this._botsServer = new BotsServer();
     this._botsServer.init();
     const playerId = this._botsServer.joinPlayer(this.getPlayer());
-    setTimeout(() => this._botsServer.addBots(), 2000);
+    setTimeout(() => this._botsServer.addBots('play'), 2000);
     return playerId;
   }
 
@@ -56,7 +56,7 @@ export class OfflineServer implements ServerInterface {
     this._botsServer.init();
     // Directly add bots (no human join)
     setTimeout(() => {
-      this._botsServer.addBots();
+      this._botsServer.addBots('arena');
       // After bots are added, BotsServer will call start() ~1s later.
       // Schedule ready() to kick off bot turns automatically.
       setTimeout(() => this._botsServer.ready(), 1500);

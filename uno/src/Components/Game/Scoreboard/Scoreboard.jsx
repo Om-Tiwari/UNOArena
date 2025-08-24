@@ -57,7 +57,14 @@ export default function Scoreboard({ players }) {
           <div className="img">
             <Avatar seed={`${p.name}${p.img}`} />{" "}
           </div>
-          <div className="name">{p.name}</div>
+          <div className="name">
+            {p.name}
+            {p.isBot && p.llmProvider ? (
+              <span style={{ fontSize: 14, color: '#bbb', marginLeft: 8 }}>
+                {`(${p.llmProvider}${p.llmModel ? ':' + p.llmModel : ''})`}
+              </span>
+            ) : null}
+          </div>
         </div>
       ))}
 
