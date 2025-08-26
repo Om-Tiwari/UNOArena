@@ -34,4 +34,5 @@ wheels/
 .python-version
 *.lock
 .env
-.ruff_cache/
+.ruff_cache
+.pytest_cache

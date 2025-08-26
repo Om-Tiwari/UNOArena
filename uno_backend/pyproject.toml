@@ -11,6 +11,7 @@ dependencies = [
     "langchain-google-genai>=2.1.9",
     "langchain-groq>=0.3.7",
     "langchain-huggingface>=0.3.1",
+    "langchain-openai>=0.3.30",
     "langchain-sambanova>=0.1.6",
     "openai>=1.99.9",
     "pytest>=8.4.1",
