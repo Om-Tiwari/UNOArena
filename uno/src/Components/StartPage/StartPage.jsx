@@ -1,7 +1,7 @@
 import { Typography } from "@mui/material";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate } from "react-router-dom";
 import styled from "styled-components";
 
 const Root = styled.div`
@@ -33,10 +33,11 @@ export default function StartPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    setTimeout(() => {
+    const tid = setTimeout(() => {
       if (localStorage.getItem("playerName")) navigate("/main-menu");
       else navigate("/create-user");
     }, 3000);
+    return () => clearTimeout(tid);
   }, [navigate]);
 
   return (

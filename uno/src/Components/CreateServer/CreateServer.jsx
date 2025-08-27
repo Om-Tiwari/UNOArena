@@ -6,7 +6,7 @@ import Button from "../Shared/Button/Button";
 import TextField from "../Shared/TextField/TextField";
 import Switch from "../Shared/Switch/Switch";
 import { useNavigate } from "react-router-dom";
-import API from "../../api/API.ts";
+import API from "../../api/API";
 
 import Typography from "../Shared/Typography/Typography";
 import { useDispatch } from "../../utils/hooks";
@@ -16,14 +16,24 @@ const CreateServer = () => {
   const [serverName, setServerName] = React.useState("");
   const [serverPassword, setServerPassword] = React.useState("");
   const [isPrivate, setIsPrivate] = React.useState(true);
+  const [creating, setCreating] = React.useState(false);
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
   const handleCreateServer = async () => {
-    const playerId = await API.createServer(serverName, serverPassword);
-    dispatch(setPlayerId(playerId));
-    dispatch(setInLobby(true));
-    navigate("/waiting-lobby");
+    if (creating) return;
+    const name = serverName.trim();
+    const pass = serverPassword.trim();
+    if ((isPrivate && (!name || !pass)) || (!isPrivate && !name)) return;
+    try {
+      setCreating(true);
+      const playerId = await API.createServer(name, isPrivate ? pass : undefined);
+      dispatch(setPlayerId(playerId));
+      dispatch(setInLobby(true));
+      navigate("/waiting-lobby");
+    } finally {
+      setCreating(false);
+    }
   };
   return (
     <Paper>
@@ -55,6 +65,7 @@ const CreateServer = () => {
               Private
             </p>
             <Switch
+              checked={isPrivate}
               onChange={() => {
                 setIsPrivate(!isPrivate);
                 setServerPassword("");
@@ -86,9 +97,10 @@ const CreateServer = () => {
         )}
 
         <Grid item xs={12} md={10} lg={8}>
-          {((isPrivate && serverName && serverPassword) ||
-            (!isPrivate && serverName)) && (
-            <Button onClick={handleCreateServer}>Creat Server</Button>
+          {((isPrivate && serverName && serverPassword) || (!isPrivate && serverName)) && (
+            <Button onClick={handleCreateServer} disabled={creating}>
+              {creating ? "Creating..." : "Create Server"}
+            </Button>
           )}
         </Grid>
       </Grid>

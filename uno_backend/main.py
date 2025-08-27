@@ -125,8 +125,24 @@ async def health_check():
 @app.get("/providers")
 async def list_providers():
     """List supported LLM providers and their default models"""
+    # Sanitize config to ensure JSON-serializable response (exclude non-serializable class objects)
+    safe_providers = {}
+    for key, cfg in PROVIDERS_CONFIG.items():
+        safe_cfg = {
+            k: v
+            for k, v in cfg.items()
+            if k != "class"  # exclude class references (not JSON serializable)
+        }
+        # Optionally include class name as string for UI display/debugging
+        if "class" in cfg:
+            try:
+                safe_cfg["class_name"] = getattr(cfg["class"], "__name__", str(cfg["class"]))
+            except Exception:
+                safe_cfg["class_name"] = "unknown"
+        safe_providers[key] = safe_cfg
+
     return {
-        "providers": PROVIDERS_CONFIG,
+        "providers": safe_providers,
         "usage": "Specify provider and optionally model in your requests",
     }
 

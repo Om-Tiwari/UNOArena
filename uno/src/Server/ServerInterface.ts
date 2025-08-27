@@ -1,4 +1,4 @@
-import { Card, GameServer, Player } from "../utils/interfaces";
+import type { Card, GameServer, Player } from "../utils/interfaces";
 
 export interface ServerInterface {
   player?: Player;

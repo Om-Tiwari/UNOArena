@@ -37,7 +37,7 @@ const JoinServer = () => {
   const [showPrivate, setShowPrivate] = React.useState(true);
   const [selectedServer, setSelectedServer] = React.useState(null);
 
-  const [password, setPassword] = React.useState(null); //for show button
+  const [password, setPassword] = React.useState(""); //for show button
   const [selectOne, setSelectOne] = React.useState(false); //for show button
 
   const [isPrivate, setIsPrivate] = React.useState(false);
@@ -86,7 +86,7 @@ const JoinServer = () => {
               Show Private Servers
             </p>
             <Checkbox
-              defaultChecked
+              checked={showPrivate}
               color="info"
               onChange={() => {
                 setShowPrivate(!showPrivate);
@@ -99,7 +99,7 @@ const JoinServer = () => {
         <Grid item xs={12}>
           <Table>
             {servers.map((server, index) => {
-              console.log(server);
+              if (showPrivate && !server.isPrivate) return null;
               return (
                 <CTableRow
                   key={index}
@@ -129,7 +129,7 @@ const JoinServer = () => {
                 >
                   {index === selectedServer && server.isPrivate ? (
                     <>
-                      <CTableCell>{server.serverName}</CTableCell>
+                      <CTableCell>{server.name}</CTableCell>
                       <TextField
                         type="password"
                         placeholder="Enter the server password"

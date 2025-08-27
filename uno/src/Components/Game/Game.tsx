@@ -13,9 +13,9 @@ import {
   stopGame,
 } from "../../stores/features/gameSlice";
 import Scoreboard from "./Scoreboard/Scoreboard.jsx";
-import { Player } from "../../utils/interfaces.js";
+import type { Player } from "../../utils/interfaces";
 import API from "../../api/API";
-import { Navigate, } from "react-router";
+import { Navigate } from "react-router-dom";
 import GameAudio from "../../utils/audio.js";
 
 export default function Game() {
@@ -32,9 +32,10 @@ export default function Game() {
 
   useEffect(() => {
     const timeoutReady = setTimeout(() => {
-      API.emitReady()
-    }, 2000)
-    API.onMove(({ card, draw, cardsToDraw, nxtPlayer }) => {
+      API.emitReady();
+    }, 2000);
+
+    const unsubMove = API.onMove(({ card, draw, cardsToDraw, nxtPlayer }) => {
 
       dispatch(
         moveCard({
@@ -48,18 +49,20 @@ export default function Game() {
         GameAudio.playAudio('draw', draw);
       } else GameAudio.playAudio('play')
       setTimeout(() => dispatch(movePlayer()), 500);
-    })
+    });
 
-    API.onFinishGame((players: Player[]) => {
+    const unsubFinish = API.onFinishGame((players: Player[]) => {
       setFinished(true);
       setPlayersOrder(players);
-    })
+    });
 
     return () => {
       API.leaveServer();
       dispatch(stopGame());
-      clearTimeout(timeoutReady)
-    }
+      clearTimeout(timeoutReady);
+      if (typeof unsubMove === 'function') unsubMove();
+      if (typeof unsubFinish === 'function') unsubFinish();
+    };
   }, [dispatch]);
 
 

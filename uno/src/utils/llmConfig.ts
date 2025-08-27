@@ -5,15 +5,8 @@ export type LLMMode = 'arena' | 'play';
 
 const STORAGE_KEY = "llmExperimentConfig.v2";
 
-// Default providers map used until backend sync completes
-const INITIAL_PROVIDERS: Record<string, { label: string; models: string[] }> = {
-  gemini: { label: "Gemini", models: ["gemini-2.5-pro", "gemma-3-12b-it", "gemini-2.5-flash"] },
-  groq: { label: "Groq", models: ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "moonshotai/kimi-k2-instruct"] },
-  cerebras: { label: "Cerebras", models: ["qwen-3-235b-a22b-thinking-2507", "gpt-oss-120b", "qwen-3-32b", "llama-4-maverick-17b-128e-instruct"] },
-  sambanova: { label: "SambaNova", models: ["DeepSeek-R1-0528", "Meta-Llama-3.3-70B-Instruct", "Llama-4-Maverick-17B-128E-Instruct"] },
-};
-
-let availableProviders: Record<string, { label: string; models: string[] }> = { ...INITIAL_PROVIDERS };
+// Providers come exclusively from the backend
+let availableProviders: Record<string, { label: string; models: string[] }> = {};
 
 export function getAvailableProviders() {
   return availableProviders;
@@ -36,7 +29,7 @@ export async function loadProvidersFromBackend(baseUrl = "http://localhost:8000"
       availableProviders = mapped;
     }
   } catch (e) {
-    // ignore, keep initial
+    // ignore, keep current (possibly empty) list
   }
   return availableProviders;
 }

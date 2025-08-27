@@ -32,10 +32,11 @@ const Lobby = () => {
 
     let timeout = null;
     let unsubInit = null;
+    let unsubPlayers = null;
     (async () => {
       const serverPlayers = await API.getServerPlayers();
       setPlayers(serverPlayers);
-      API.onPlayersUpdated((players) => setPlayers(players));
+      unsubPlayers = API.onPlayersUpdated((players) => setPlayers(players));
       unsubInit = API.onGameInit(({ players, cards }) => {
         dispatch(init({ cards, players }));
         timeout = setTimeout(() => navigate("/game"), 2000);
@@ -45,6 +46,7 @@ const Lobby = () => {
     return () => {
       if (timeout) clearTimeout(timeout);
       if (unsubInit) unsubInit();
+      if (unsubPlayers) unsubPlayers();
       dispatch(setInLobby(false));
     };
   }, [dispatch, navigate, inLobby]);

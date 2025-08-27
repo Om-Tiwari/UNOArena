@@ -1,7 +1,7 @@
 import React from "react";
 import styled from "styled-components";
 import { Button as MuiButton } from "@mui/material";
-import { useNavigate } from "react-router";
+import { useNavigate } from "react-router-dom";
 
 const Cbutton = styled(MuiButton)`
   &.MuiButton-root {
@@ -39,10 +39,9 @@ const Cbutton = styled(MuiButton)`
 const Button = ({ children, href, ...props }) => {
   const navigate = useNavigate();
 
-  const onClick = () => {
-    console.log(props.disabled);
-    if (props.onClick) props.onClick();
-    if (href && !props.disabled) navigate(href);
+  const onClick = (e) => {
+    if (props.onClick) props.onClick(e);
+    if (href && !props.disabled && !e?.defaultPrevented) navigate(href);
   };
 
   return (

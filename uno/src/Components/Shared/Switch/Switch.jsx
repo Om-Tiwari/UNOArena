@@ -74,6 +74,6 @@ export default function UnstyledSwitches(props) {
   const label = { componentsProps: { input: { "aria-label": "switch" } } };
 
   return (
-    <SwitchUnstyled component={Root} {...label} {...props} defaultChecked />
+    <SwitchUnstyled component={Root} {...label} {...props} />
   );
 }

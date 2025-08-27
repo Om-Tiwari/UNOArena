@@ -34,6 +34,22 @@ export default class BotsServer extends EventsObject {
   botTimeout = null;
   llmBot: LLMEnhancedBotsServer;
 
+  // Constants
+  private static readonly NUM_CARDS = 7;
+  private static readonly START_DELAY_MS = 1000;
+  private static readonly RECYCLE_KEEP = 5;
+
+  // Helpers (private methods)
+  private delay(ms: number): Promise<void> {
+    return new Promise((res) => setTimeout(res, ms));
+  }
+
+  private recycleDeck(): void {
+    const keep = BotsServer.RECYCLE_KEEP;
+    this.drawingStk = shuffle(this.tableStk.slice(keep));
+    this.tableStk = this.tableStk.slice(0, keep);
+  }
+
   constructor(numberOfPlayers = 4) {
     super();
     this.numberOfPlayers = numberOfPlayers;
@@ -94,20 +110,18 @@ export default class BotsServer extends EventsObject {
     }
     this.fireEvent("players-changed", this.players);
     if (this.players.length === this.numberOfPlayers)
-      setTimeout(() => {
-        this.start();
-      }, 1000);
+      this.delay(BotsServer.START_DELAY_MS).then(() => this.start());
   }
 
   start() {
     const cards = [...data.cards] as Card[];
     shuffle(cards);
     shuffle(this.players);
-    const NUM_CARDS = 7;
+    const NUM = BotsServer.NUM_CARDS;
     this.players.forEach((player, idx) => {
-      player.cards = cards.slice(idx * NUM_CARDS, (idx + 1) * NUM_CARDS);
+      player.cards = cards.slice(idx * NUM, (idx + 1) * NUM);
     });
-    this.drawingStk = cards.slice(this.players.length * NUM_CARDS, cards.length);
+    this.drawingStk = cards.slice(this.players.length * NUM, cards.length);
 
     // Flip the first table card (prefer a non-black card)
     let idx = 0;
@@ -147,8 +161,7 @@ export default class BotsServer extends EventsObject {
 
       moveEventObj.draw = drawCnt;
       if (drawCnt + 1 > this.drawingStk.length) {
-        this.drawingStk = shuffle(this.tableStk.slice(5, this.tableStk.length));
-        this.tableStk = this.tableStk.slice(0, 5);
+        this.recycleDeck();
       }
 
       moveEventObj.cardsToDraw = this.drawingStk.slice(0, drawCnt);
@@ -223,14 +236,27 @@ export default class BotsServer extends EventsObject {
 
   async moveBot() {
     const currentPlayer = this.players[this.curPlayer];
+    const mappedPlayerCards = currentPlayer.cards.map(c => ({
+      id: (c.id || "") as string,
+      digit: c.digit,
+      color: (c.color || 'black') as string,
+      action: c.action,
+    }));
     const gameState = {
         currentPlayer: {
-            id: currentPlayer.id,
+            id: currentPlayer.id as string,
             name: currentPlayer.name,
-            cards: currentPlayer.cards,
+            cards: mappedPlayerCards,
         },
-        tableStack: this.tableStk,
-        otherPlayers: this.players.filter(p => p.id !== currentPlayer.id).map(p => ({ name: p.name, cards: p.cards.length })),
+        tableStack: this.tableStk.map(c => ({
+          id: (c.id || "") as string,
+          digit: c.digit,
+          color: (c.color || 'black') as string,
+          action: c.action,
+        })),
+        otherPlayers: this.players
+          .filter(p => p.id !== currentPlayer.id)
+          .map(p => ({ name: p.name, cards: p.cards.length })),
         direction: this.direction,
         sumDrawing: this.sumDrawing,
         lastPlayerDrew: this.lastPlayerDrew,
@@ -247,7 +273,7 @@ export default class BotsServer extends EventsObject {
               currentPlayer.llmApiKey,
             );
         }
-        const llmMove = await this.llmBot.getLLMMove(gameState, currentPlayer.cards);
+        const llmMove = await this.llmBot.getLLMMove(gameState, mappedPlayerCards);
         if (llmMove.action === 'play' && llmMove.card_id) {
             this.move(false, llmMove.card_id);
         } else {

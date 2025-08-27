@@ -47,6 +47,9 @@ export interface LLMMoveRequest {
     apiKey?: string;
 }
 
+// Basic debug switch for logging (disable in production builds automatically if desired)
+const DEBUG_LLM = process.env.NODE_ENV !== 'production' && false;
+
 export interface LLMMoveResponse {
     action: "play" | "draw";
     card_id?: string;
@@ -89,7 +92,7 @@ export class LLMEnhancedBotsServer extends EventsObject {
      */
     setLLMUsage(enabled: boolean): void {
         this.llmUsage = enabled;
-        console.log(`LLM usage ${enabled ? 'enabled' : 'disabled'} for bot players`);
+        if (DEBUG_LLM) console.log(`LLM usage ${enabled ? 'enabled' : 'disabled'} for bot players`);
     }
 
     /**
@@ -97,7 +100,7 @@ export class LLMEnhancedBotsServer extends EventsObject {
      */
     setLLMBackendUrl(url: string): void {
         this.llmBackendUrl = url;
-        console.log(`LLM backend URL set to: ${url}`);
+        if (DEBUG_LLM) console.log(`LLM backend URL set to: ${url}`);
     }
 
     /**
@@ -105,7 +108,7 @@ export class LLMEnhancedBotsServer extends EventsObject {
      */
     setLLMTimeout(timeout: number): void {
         this.llmTimeout = timeout;
-        console.log(`LLM timeout set to: ${timeout}ms`);
+        if (DEBUG_LLM) console.log(`LLM timeout set to: ${timeout}ms`);
     }
 
     /**
@@ -122,15 +125,18 @@ export class LLMEnhancedBotsServer extends EventsObject {
         if (apiKey) {
             this.apiKey = apiKey;
         }
-        console.log(`LLM provider set to: ${provider} with model: ${this.model || 'default'}`);
+        if (DEBUG_LLM) console.log(`LLM provider set to: ${provider} with model: ${this.model || 'default'}`);
     }
 
     /**
      * Get an intelligent move from the LLM backend
      */
-    async getLLMMove(gameState: any, playerCards: any[]): Promise<LLMMoveResponse> {
+    async getLLMMove(
+        gameState: LLMMoveRequest['gameState'],
+        playerCards: LLMMoveRequest['playerCards']
+    ): Promise<LLMMoveResponse> {
         if (!this.llmUsage) {
-            console.log("LLM usage disabled, falling back to simple bot logic");
+            if (DEBUG_LLM) console.log("LLM usage disabled, falling back to simple bot logic");
             return this.fallbackMoveBot(gameState, playerCards);
         }
 
@@ -144,27 +150,35 @@ export class LLMEnhancedBotsServer extends EventsObject {
                 apiKey: this.apiKey
             };
 
-            console.log("Requesting LLM move from backend...");
+            if (DEBUG_LLM) console.log("Requesting LLM move from backend...");
             
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), this.llmTimeout);
             const response = await fetch(`${this.llmBackendUrl}/move`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(request),
-                // signal: AbortSignal.timeout(this.llmTimeout)
+                signal: controller.signal,
             });
+            clearTimeout(timeoutId);
 
             if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                let detail = '';
+                try {
+                    const errJson = await response.json();
+                    detail = errJson?.detail ? ` - ${JSON.stringify(errJson.detail)}` : '';
+                } catch {}
+                throw new Error(`HTTP ${response.status}: ${response.statusText}${detail}`);
             }
 
             const moveResponse: LLMMoveResponse = await response.json();
             
-            console.log("LLM move received:", moveResponse);
+            if (DEBUG_LLM) console.log("LLM move received:", moveResponse);
             
             if (!moveResponse.isValid) {
-                console.warn("LLM returned invalid move:", moveResponse.validationMessage);
+                if (DEBUG_LLM) console.warn("LLM returned invalid move:", moveResponse.validationMessage);
                 // Fall back to simple bot logic if LLM move is invalid
                 return this.fallbackMoveBot(gameState, playerCards);
             }
@@ -172,8 +186,8 @@ export class LLMEnhancedBotsServer extends EventsObject {
             return moveResponse;
 
         } catch (error) {
-            console.error("Error getting LLM move:", error);
-            console.log("Falling back to simple bot logic");
+            if (DEBUG_LLM) console.error("Error getting LLM move:", error);
+            if (DEBUG_LLM) console.log("Falling back to simple bot logic");
             return this.fallbackMoveBot(gameState, playerCards);
         }
     }
@@ -181,7 +195,7 @@ export class LLMEnhancedBotsServer extends EventsObject {
     /**
      * Format game state for the LLM backend
      */
-    private getGameStateForLLM(gameState: any): LLMMoveRequest['gameState'] {
+    private getGameStateForLLM(gameState: LLMMoveRequest['gameState']): LLMMoveRequest['gameState'] {
         return {
             currentPlayer: {
                 id: gameState.currentPlayer?.id || "bot_player",
@@ -200,8 +214,11 @@ export class LLMEnhancedBotsServer extends EventsObject {
     /**
      * Fallback bot logic when LLM is unavailable or disabled
      */
-    private fallbackMoveBot(gameState: any, playerCards: any[]): LLMMoveResponse {
-        console.log("Using fallback bot logic");
+    private fallbackMoveBot(
+        gameState: LLMMoveRequest['gameState'],
+        playerCards: LLMMoveRequest['playerCards']
+    ): LLMMoveResponse {
+        if (DEBUG_LLM) console.log("Using fallback bot logic");
         
         const topCard = gameState.tableStack?.[0];
 
@@ -211,7 +228,10 @@ export class LLMEnhancedBotsServer extends EventsObject {
         );
 
         if (playableCards.length > 0) {
-            const bestCard = playableCards[0]; // Simplistic choice
+            // Prefer matching color, then action cards, else first
+            const sameColor = topCard ? playableCards.find(c => c.color === topCard.color) : undefined;
+            const actionCard = playableCards.find(c => !!c.action && c.action !== 'wild');
+            const bestCard = sameColor || actionCard || playableCards[0];
             return {
                 action: "play",
                 card_id: bestCard.id,

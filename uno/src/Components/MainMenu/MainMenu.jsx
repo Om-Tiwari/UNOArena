@@ -34,11 +34,11 @@ const MainMenu = () => {
   }, [mode]);
 
   const onPlayOnline = () => {
-    API.playOnline(true);
+    API.playOnline();
   };
 
   const onPlayOffline = async () => {
-    API.playOnline(false);
+    API.playOnline();
     const playerId = await API.joinServer();
     dispatch(setPlayerId(playerId));
     dispatch(setInLobby(true));
@@ -54,12 +54,30 @@ const MainMenu = () => {
   };
 
   const toggleProvider = (provider) => {
-    setCfg((prev) => ({
-      ...prev,
-      providers: prev.providers.map((p) =>
-        p.provider === provider ? { ...p, enabled: !p.enabled } : p
-      ),
-    }));
+    const meta = getAvailableProviders()[provider];
+    setCfg((prev) => {
+      const existing = prev.providers.find((p) => p.provider === provider);
+      if (existing) {
+        return {
+          ...prev,
+          providers: prev.providers.map((p) =>
+            p.provider === provider ? { ...p, enabled: !p.enabled } : p
+          ),
+        };
+      }
+      // If provider not in config yet, add it with toggled state (user clicked to change from default true)
+      return {
+        ...prev,
+        providers: [
+          ...prev.providers,
+          {
+            provider,
+            enabled: false,
+            model: meta?.models?.[0] || "",
+          },
+        ],
+      };
+    });
   };
 
   const changeModel = (provider, model) => {
@@ -105,7 +123,7 @@ const MainMenu = () => {
           alignItems="center"
           justifyContent="center"
           spacing={2}
-          sx={12}
+          xs={12}
         >
           <Grid item xs={12} md={5} mt={3}>
             <Button style={{ width: "80%" }} onClick={onPlayOffline}>
@@ -179,7 +197,7 @@ const MainMenu = () => {
           container
           alignItems="center"
           justifyContent="center"
-          sx={12}
+          xs={12}
         >
           <Grid item xs={6}>
             <a

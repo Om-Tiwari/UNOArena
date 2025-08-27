@@ -1,6 +1,5 @@
-import { GameServer, Player, Card } from "../utils/interfaces";
+import type { GameServer, Player, Card } from "../utils/interfaces";
 import { ServerInterface } from "./ServerInterface";
-import { socket } from "../api/socket";
 import BotsServer from "../BotsServer/BotsServer";
 
 export class OfflineServer implements ServerInterface {
@@ -27,16 +26,9 @@ export class OfflineServer implements ServerInterface {
     serverName: string,
     serverPassword?: string
   ): Promise<string> {
-    return new Promise((res, rej) => {
-      socket.emit(
-        "create-server",
-        { serverName, serverPassword, player: this.getPlayer() },
-        (err: any, playerId: string) => {
-          if (err) return rej(err);
-          res(playerId);
-        }
-      );
-    });
+    // Offline mode: no actual server is created. Return a synthetic id.
+    const syntheticId = "offline_server";
+    return Promise.resolve(syntheticId);
   }
 
   async joinServer(serverId: string, serverPassword?: string): Promise<string> {
@@ -70,22 +62,29 @@ export class OfflineServer implements ServerInterface {
   }
 
   leaveServer(): void {
-    this._botsServer = null as any;
+    // Safely remove all listeners; keep instance to avoid null deref in unsubscribe closures
+    if (this._botsServer) {
+      try {
+        this._botsServer.removeAllListeners();
+      } catch (_) {
+        // ignore
+      }
+    }
   }
   async move(draw: boolean | null, cardId: string): Promise<void> {
     this._botsServer.move(draw, cardId);
   }
 
   onPlayersUpdated(cb: (players: Player[]) => void): () => void {
-    this._botsServer.addEventListener("players-changed", cb);
-    return () => this._botsServer.removeEventListener("players-changed", cb);
+    this._botsServer?.addEventListener("players-changed", cb);
+    return () => this._botsServer?.removeEventListener("players-changed", cb);
   }
 
   onGameInit(
     cb: (data: { players: Player[]; cards: Card[] }) => void
   ): () => void {
-    this._botsServer.addEventListener("game-init", cb);
-    return () => this._botsServer.removeEventListener("game-init", cb);
+    this._botsServer?.addEventListener("game-init", cb);
+    return () => this._botsServer?.removeEventListener("game-init", cb);
   }
 
   onMove(
@@ -96,22 +95,22 @@ export class OfflineServer implements ServerInterface {
       cardsToDraw?: Card[] | undefined;
     }) => void
   ): () => void {
-    this._botsServer.addEventListener("move", cb);
-    return () => this._botsServer.removeEventListener("move", cb);
+    this._botsServer?.addEventListener("move", cb);
+    return () => this._botsServer?.removeEventListener("move", cb);
   }
 
   onPlayerLeft(cb: () => void): () => void {
-    this._botsServer.addEventListener("player-left", cb);
-    return () => this._botsServer.removeEventListener("player-left", cb);
+    this._botsServer?.addEventListener("player-left", cb);
+    return () => this._botsServer?.removeEventListener("player-left", cb);
   }
 
   onFinishGame(cb: (playersOrdered: Player[]) => void): () => void {
-    this._botsServer.addEventListener("finish-game", cb);
-    return () => this._botsServer.removeEventListener("finish-game", cb);
+    this._botsServer?.addEventListener("finish-game", cb);
+    return () => this._botsServer?.removeEventListener("finish-game", cb);
   }
 
   removeAllListeners() {
-    this._botsServer.removeAllListeners();
+    this._botsServer?.removeAllListeners();
   }
 
   getPlayer(): Player {
