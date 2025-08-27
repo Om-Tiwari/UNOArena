@@ -12,9 +12,14 @@ export function getAvailableProviders() {
   return availableProviders;
 }
 
-export async function loadProvidersFromBackend(baseUrl = "http://localhost:8000"): Promise<Record<string, { label: string; models: string[] }>> {
+export async function loadProvidersFromBackend(baseUrl?: string): Promise<Record<string, { label: string; models: string[] }>> {
   try {
-    const res = await fetch(`${baseUrl}/providers`);
+    const resolvedBase =
+      baseUrl ||
+      (process.env.REACT_APP_LLM_BACKEND_URL as string) ||
+      (process.env.NEXT_PUBLIC_LLM_BACKEND_URL as string) ||
+      "http://localhost:8000";
+    const res = await fetch(`${resolvedBase}/providers`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const json = await res.json();
     // json.providers = { provider: { default_model, supported_models, ... } }

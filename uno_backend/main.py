@@ -2,6 +2,7 @@ import logging
 from typing import Dict, List, Optional, Literal
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+import os
 from pydantic import BaseModel
 from LLMPlayer import LLMPlayer, UNOMove
 from config import PROVIDERS_CONFIG
@@ -21,9 +22,16 @@ app = FastAPI(
 )
 
 # Add CORS middleware
+# Configure allowed origins via env (comma-separated). Include scheme (https://) for exact match.
+allowed_origins_env = os.getenv(
+    "BACKEND_ALLOWED_ORIGINS",
+    "https://uno-arena.vercel.app,https://uno-arena-lmb89jicu-omtiwaris-projects.vercel.app,http://localhost:3000",
+)
+ALLOWED_ORIGINS = [o.strip() for o in allowed_origins_env.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

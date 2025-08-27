@@ -80,7 +80,11 @@ export class LLMEnhancedBotsServer extends EventsObject {
         super();
         
         // Default configuration
-        this.llmBackendUrl = "http://localhost:8000";
+        // Allow overriding via env for deployments (CRA uses REACT_APP_*, Next uses NEXT_PUBLIC_*)
+        this.llmBackendUrl =
+            (process.env.REACT_APP_LLM_BACKEND_URL as string) ||
+            (process.env.NEXT_PUBLIC_LLM_BACKEND_URL as string) ||
+            "http://localhost:8000";
         this.llmTimeout = 15000; 
         this.llmUsage = true; 
         this.apiProvider = "";
